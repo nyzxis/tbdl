@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  tbdl:
+    build: .
+    container_name: tbdl-app
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - TERABOX_COOKIE_NDUS=${TERABOX_COOKIE_NDUS}
+    env_file:
+      - .env
