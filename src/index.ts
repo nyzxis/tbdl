@@ -1,5 +1,5 @@
 import { fetchTeraBoxData } from "./lib/terabox";
-import { isValidShareUrl, extractSurl } from "./lib/utils";
+import { isValidShareUrl, extractSurl, extractHost } from "./lib/utils";
 
 const port = Number(process.env.PORT) || 5000;
 
@@ -44,7 +44,7 @@ Bun.serve({
         {
           status: "ok",
           service: "tbdl",
-          version: "1.0.0",
+          version: "1.0.1",
           cached_items: cache.size,
           timestamp: new Date().toISOString(),
         },
@@ -107,13 +107,15 @@ Bun.serve({
         );
       }
 
+      const host = extractHost(targetUrl);
+
       // Check cache
       let resultData: any;
       const cached = cache.get(surl);
       if (cached && Date.now() < cached.expiry) {
         resultData = cached.data;
       } else {
-        resultData = await fetchTeraBoxData(surl);
+        resultData = await fetchTeraBoxData(surl, host);
         if (resultData.status === "success") {
           cache.set(surl, { data: resultData, expiry: Date.now() + CACHE_DURATION });
         }

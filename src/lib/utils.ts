@@ -4,15 +4,18 @@ import path from "path";
 export const ALLOWED_HOSTS = new Set([
   "terabox.app",
   "www.terabox.app",
-  "teraboxshare.com",
-  "www.teraboxshare.com",
+  "dm.terabox.app",
   "terabox.com",
   "www.terabox.com",
+  "teraboxshare.com",
+  "www.teraboxshare.com",
   "1024terabox.com",
   "www.1024terabox.com",
+  "1024tera.com",
+  "www.1024tera.com",
+  "dm.1024tera.com",
   "teraboxlink.com",
   "www.teraboxlink.com",
-  "dm.terabox.app",
   "freeterabox.com",
   "www.freeterabox.com",
   "tibox.app",
@@ -23,6 +26,10 @@ export const ALLOWED_HOSTS = new Set([
   "www.mirrobox.com",
   "nephobox.com",
   "www.nephobox.com",
+  "terasharelink.com",
+  "www.terasharelink.com",
+  "momerybox.com",
+  "www.momerybox.com",
 ]);
 
 export function loadCookies(): Record<string, string> {
@@ -89,12 +96,23 @@ export function isValidShareUrl(u: string): boolean {
       return false;
     }
     const host = parsed.hostname.toLowerCase();
-    if (!ALLOWED_HOSTS.has(host) && !host.includes("terabox")) {
+
+    // Check against known hosts or host patterns
+    const isKnownDomain =
+      ALLOWED_HOSTS.has(host) ||
+      host.includes("tera") ||
+      host.includes("box") ||
+      host.includes("1024") ||
+      host.includes("dubox");
+
+    if (!isKnownDomain) {
       return false;
     }
+
     return (
       parsed.pathname.includes("/s/") ||
       parsed.pathname.includes("/sharing/") ||
+      parsed.pathname.includes("/share/") ||
       parsed.searchParams.has("surl")
     );
   } catch {
@@ -115,6 +133,15 @@ export function extractSurl(url: string): string | null {
     return null;
   } catch {
     return null;
+  }
+}
+
+export function extractHost(url: string): string {
+  try {
+    const parsed = new URL(url);
+    return parsed.hostname.toLowerCase();
+  } catch {
+    return "dm.terabox.app";
   }
 }
 

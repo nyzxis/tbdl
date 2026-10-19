@@ -363,20 +363,31 @@
 
               <!-- Action Buttons -->
               <div class="flex items-center gap-2 shrink-0">
-                <button 
-                  onclick="copyToClipboard('${file.dlink}', this)"
-                  class="flex-1 sm:flex-initial px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs sm:text-sm font-medium transition flex items-center justify-center gap-1.5">
-                  <i class="fa-regular fa-copy"></i>
-                  <span>Copy Link</span>
-                </button>
-                <a 
-                  href="${file.dlink}" 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  class="flex-1 sm:flex-initial px-4 py-2 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs sm:text-sm font-semibold shadow-md shadow-emerald-700/20 transition flex items-center justify-center gap-1.5">
-                  <i class="fa-solid fa-download"></i>
-                  <span>Download</span>
-                </a>
+                ${file.dlink ? `
+                  <button 
+                    onclick="copyToClipboard('${file.dlink}', this)"
+                    class="flex-1 sm:flex-initial px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs sm:text-sm font-medium transition flex items-center justify-center gap-1.5">
+                    <i class="fa-regular fa-copy"></i>
+                    <span>Copy Link</span>
+                  </button>
+                  <a 
+                    href="${file.dlink}" 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    class="flex-1 sm:flex-initial px-4 py-2 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs sm:text-sm font-semibold shadow-md shadow-emerald-700/20 transition flex items-center justify-center gap-1.5">
+                    <i class="fa-solid fa-download"></i>
+                    <span>Download</span>
+                  </a>
+                ` : `
+                  <a 
+                    href="${rawUrl}" 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    class="flex-1 sm:flex-initial px-4 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs sm:text-sm font-semibold shadow-md shadow-blue-700/20 transition flex items-center justify-center gap-1.5">
+                    <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                    <span>Open Media</span>
+                  </a>
+                `}
               </div>
             </div>
           `;
