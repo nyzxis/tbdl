@@ -20,14 +20,18 @@ export interface TeraBoxResult {
   primary_file?: TeraBoxFile;
 }
 
-export async function fetchTeraBoxData(surl: string, preferredHost?: string): Promise<TeraBoxResult> {
+export async function fetchTeraBoxData(
+  surl: string, 
+  preferredHost?: string,
+  customNdus?: string
+): Promise<TeraBoxResult> {
   let short_url = surl;
   if (surl.startsWith("1")) {
     short_url = surl.substring(1);
   }
 
   const cookies = loadCookies();
-  const ndusCookie = cookies["ndus"];
+  const ndusCookie = customNdus?.trim() || cookies["ndus"];
 
   const cookieHeader = ndusCookie ? `ndus=${ndusCookie}` : "";
 

@@ -113,6 +113,33 @@
           </div>
         </div>
 
+        <!-- Cookie Settings Accordion -->
+        <details id="cookieAccordion" class="group text-xs text-slate-400">
+          <summary class="cursor-pointer hover:text-slate-300 transition flex items-center justify-between py-1 select-none">
+            <span class="flex items-center gap-1.5">
+              <i class="fa-solid fa-cookie-bite text-amber-400"></i>
+              <span>TeraBox Session Cookie (ndus)</span>
+              <span id="cookieBadge" class="hidden text-[10px] px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">Saved</span>
+            </span>
+            <i class="fa-solid fa-chevron-down text-[10px] group-open:rotate-180 transition-transform"></i>
+          </summary>
+          <div class="mt-2 p-3 bg-slate-950/80 border border-slate-800 rounded-xl space-y-2">
+            <div class="flex items-center justify-between">
+              <label for="cookieInput" class="text-xs text-slate-300 font-medium">Your 'ndus' Cookie:</label>
+              <button type="button" id="clearCookieBtn" class="text-[10px] text-red-400 hover:underline">Clear</button>
+            </div>
+            <input 
+              type="text" 
+              id="cookieInput" 
+              placeholder="Paste your ndus cookie value here..."
+              class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-slate-200 text-xs focus:outline-none focus:border-blue-500 font-mono"
+            />
+            <p class="text-[11px] text-slate-500">
+              💡 Required for files over 50MB and folder downloads. Found in browser DevTools &rarr; Application &rarr; Cookies &rarr; <code class="text-blue-300">ndus</code>. Saved in your browser's localStorage.
+            </p>
+          </div>
+        </details>
+
         <button 
           type="submit" 
           id="submitBtn" 
@@ -291,6 +318,37 @@
       } catch {}
     }
 
+    const cookieInput = document.getElementById('cookieInput');
+    const cookieBadge = document.getElementById('cookieBadge');
+    const clearCookieBtn = document.getElementById('clearCookieBtn');
+    const cookieAccordion = document.getElementById('cookieAccordion');
+
+    const COOKIE_STORAGE_KEY = 'tbdl_ndus';
+
+    // Load saved cookie if present
+    const savedCookie = localStorage.getItem(COOKIE_STORAGE_KEY) || '';
+    if (savedCookie) {
+      cookieInput.value = savedCookie;
+      cookieBadge.classList.remove('hidden');
+    }
+
+    cookieInput.addEventListener('input', () => {
+      const val = cookieInput.value.trim();
+      if (val) {
+        localStorage.setItem(COOKIE_STORAGE_KEY, val);
+        cookieBadge.classList.remove('hidden');
+      } else {
+        localStorage.removeItem(COOKIE_STORAGE_KEY);
+        cookieBadge.classList.add('hidden');
+      }
+    });
+
+    clearCookieBtn.addEventListener('click', () => {
+      cookieInput.value = '';
+      localStorage.removeItem(COOKIE_STORAGE_KEY);
+      cookieBadge.classList.add('hidden');
+    });
+
     clearHistoryBtn.addEventListener('click', () => {
       localStorage.removeItem(STORAGE_KEY);
       renderHistory();
@@ -309,13 +367,20 @@
       submitBtn.classList.add('opacity-60', 'cursor-not-allowed');
 
       try {
-        const res = await fetch(`/api?url=${encodeURIComponent(rawUrl)}`);
+        const ndusVal = (cookieInput.value || '').trim();
+        let apiEndpoint = `/api?url=${encodeURIComponent(rawUrl)}`;
+        if (ndusVal) {
+          apiEndpoint += `&ndus=${encodeURIComponent(ndusVal)}`;
+        }
+
+        const res = await fetch(apiEndpoint);
         const data = await res.json();
 
         if (!res.ok || data.status === 'error') {
           const errMsg = data.error || data.message || 'Failed to extract download link.';
           if (errMsg.includes('ndus') || errMsg.includes('cookie') || errMsg.includes('token') || errMsg.includes('verification')) {
-            showAlert(`${errMsg}<br><span class="text-xs opacity-80 mt-1 block">💡 Note: TeraBox requires a session cookie. Ensure the server has a valid <code>TERABOX_COOKIE_NDUS</code> configured in its <code>.env</code> file.</span>`, 'error');
+            showAlert(`${errMsg}<br><span class="text-xs opacity-80 mt-1 block">💡 Note: TeraBox requires a session cookie. Ensure you have entered your <code>ndus</code> cookie in the cookie drawer above or configured <code>TERABOX_COOKIE_NDUS</code> in <code>.env</code>.</span>`, 'error');
+            cookieAccordion.open = true;
           } else {
             showAlert(errMsg, 'error');
           }
@@ -339,56 +404,79 @@
             thumbSrc = typeof file.thumbs === 'string' ? file.thumbs : Object.values(file.thumbs)[0];
           }
 
-          const fileId = `file_dlink_${idx}`;
+          const hasDlink = Boolean(file.dlink && file.dlink.trim());
+
           return `
-            <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-slate-700 transition">
-              <div class="flex items-center gap-3.5 min-w-0">
-                <div class="w-14 h-14 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center shrink-0 overflow-hidden">
-                  ${thumbSrc 
-                    ? `<img src="${thumbSrc}" alt="Thumbnail" class="w-full h-full object-cover" onerror="this.outerHTML='<i class=\\\'fa-solid fa-file text-xl text-slate-500\\\'></i>'" />`
-                    : `<i class="fa-solid fa-file text-xl text-slate-500"></i>`
-                  }
-                </div>
-                <div class="min-w-0 flex-1">
-                  <h3 class="font-semibold text-slate-100 text-sm sm:text-base truncate" title="${file.server_filename}">
-                    ${file.server_filename}
-                  </h3>
-                  <div class="flex items-center gap-2 mt-1">
-                    <span class="text-xs font-mono px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300">
-                      ${file.size || 'N/A'}
-                    </span>
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 sm:p-5 flex flex-col gap-3.5 hover:border-slate-700 transition">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div class="flex items-center gap-3.5 min-w-0">
+                  <div class="w-14 h-14 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center shrink-0 overflow-hidden">
+                    ${thumbSrc 
+                      ? `<img src="${thumbSrc}" alt="Thumbnail" class="w-full h-full object-cover" onerror="this.outerHTML='<i class=\\\'fa-solid fa-file text-xl text-slate-500\\\'></i>'" />`
+                      : `<i class="fa-solid fa-file text-xl text-slate-500"></i>`
+                    }
                   </div>
+                  <div class="min-w-0 flex-1">
+                    <h3 class="font-semibold text-slate-100 text-sm sm:text-base truncate" title="${file.server_filename}">
+                      ${file.server_filename}
+                    </h3>
+                    <div class="flex items-center gap-2 mt-1">
+                      <span class="text-xs font-mono px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300">
+                        ${file.size || 'N/A'}
+                      </span>
+                      ${!hasDlink ? `
+                        <span class="text-[11px] text-amber-400 bg-amber-950/60 px-2 py-0.5 rounded border border-amber-800/60 flex items-center gap-1">
+                          <i class="fa-solid fa-lock text-[10px]"></i> Cookie Needed
+                        </span>
+                      ` : ''}
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex items-center gap-2 shrink-0">
+                  ${hasDlink ? `
+                    <button 
+                      onclick="copyToClipboard('${file.dlink}', this)"
+                      class="flex-1 sm:flex-initial px-3.5 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs sm:text-sm font-medium transition flex items-center justify-center gap-1.5">
+                      <i class="fa-regular fa-copy"></i>
+                      <span>Copy Link</span>
+                    </button>
+                    <a 
+                      href="${file.dlink}" 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      class="flex-1 sm:flex-initial px-4 py-2.5 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs sm:text-sm font-semibold shadow-md shadow-emerald-700/20 transition flex items-center justify-center gap-1.5">
+                      <i class="fa-solid fa-download"></i>
+                      <span>Direct Download</span>
+                    </a>
+                  ` : `
+                    <button 
+                      onclick="document.getElementById('cookieAccordion').open=true; document.getElementById('cookieInput').focus();"
+                      class="flex-1 sm:flex-initial px-3.5 py-2.5 rounded-lg bg-amber-900/30 hover:bg-amber-800/40 border border-amber-700/60 text-amber-300 text-xs sm:text-sm font-medium transition flex items-center justify-center gap-1.5">
+                      <i class="fa-solid fa-key"></i>
+                      <span>Enter ndus Cookie</span>
+                    </button>
+                    <a 
+                      href="${rawUrl}" 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      class="flex-1 sm:flex-initial px-4 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white text-xs sm:text-sm font-medium transition flex items-center justify-center gap-1.5">
+                      <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                      <span>Open in TeraBox</span>
+                    </a>
+                  `}
                 </div>
               </div>
 
-              <!-- Action Buttons -->
-              <div class="flex items-center gap-2 shrink-0">
-                ${file.dlink ? `
-                  <button 
-                    onclick="copyToClipboard('${file.dlink}', this)"
-                    class="flex-1 sm:flex-initial px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs sm:text-sm font-medium transition flex items-center justify-center gap-1.5">
-                    <i class="fa-regular fa-copy"></i>
-                    <span>Copy Link</span>
-                  </button>
-                  <a 
-                    href="${file.dlink}" 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    class="flex-1 sm:flex-initial px-4 py-2 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs sm:text-sm font-semibold shadow-md shadow-emerald-700/20 transition flex items-center justify-center gap-1.5">
-                    <i class="fa-solid fa-download"></i>
-                    <span>Download</span>
-                  </a>
-                ` : `
-                  <a 
-                    href="${rawUrl}" 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    class="flex-1 sm:flex-initial px-4 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs sm:text-sm font-semibold shadow-md shadow-blue-700/20 transition flex items-center justify-center gap-1.5">
-                    <i class="fa-solid fa-arrow-up-right-from-square"></i>
-                    <span>Open Media</span>
-                  </a>
-                `}
-              </div>
+              ${!hasDlink ? `
+                <div class="p-2.5 rounded-lg bg-amber-950/20 border border-amber-900/40 text-[12px] text-amber-300/90 flex items-start gap-2">
+                  <i class="fa-solid fa-circle-info mt-0.5 text-amber-400 shrink-0"></i>
+                  <span>
+                    TeraBox restricts direct downloads for files larger than 50MB (${file.size}) without an account session. Provide your <strong>ndus</strong> cookie in the drawer above to unlock the direct CDN link.
+                  </span>
+                </div>
+              ` : ''}
             </div>
           `;
         }).join('');

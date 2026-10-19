@@ -108,16 +108,22 @@ Bun.serve({
       }
 
       const host = extractHost(targetUrl);
+      const customNdus =
+        url.searchParams.get("ndus") ||
+        req.headers.get("x-terabox-ndus") ||
+        (req.method === "POST" ? (await req.clone().json().catch(() => ({})))?.ndus : null);
+
+      const cacheKey = customNdus ? `${surl}:${customNdus.slice(-8)}` : surl;
 
       // Check cache
       let resultData: any;
-      const cached = cache.get(surl);
+      const cached = cache.get(cacheKey);
       if (cached && Date.now() < cached.expiry) {
         resultData = cached.data;
       } else {
-        resultData = await fetchTeraBoxData(surl, host);
+        resultData = await fetchTeraBoxData(surl, host, customNdus);
         if (resultData.status === "success") {
-          cache.set(surl, { data: resultData, expiry: Date.now() + CACHE_DURATION });
+          cache.set(cacheKey, { data: resultData, expiry: Date.now() + CACHE_DURATION });
         }
       }
 
